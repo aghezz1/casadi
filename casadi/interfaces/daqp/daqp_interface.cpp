@@ -75,6 +75,13 @@ namespace casadi {
     // since they can be derived from other read-only members
     set_daqp_prob();
 
+    if (!discrete_.empty()) {
+      integrality_.resize(nx_);
+      copy_vector(discrete_, integrality_);
+    }
+    // Andrea: tested: discrete correctly copied into integrality
+
+
     // Allocate memory
     casadi_int sz_arg, sz_res, sz_w, sz_iw;
     casadi_daqp_work(&p_, &sz_arg, &sz_res, &sz_iw, &sz_w);
@@ -85,9 +92,34 @@ namespace casadi {
     alloc_w(sz_w, true);
   }
 
+    void codegen_local(CodeGenerator& g, const std::string& name, const std::vector<int>& v) {
+    std::string n = name + "[]";
+    g.local(n, "static const int");
+    std::stringstream init;
+    init << "{";
+    for (casadi_int i=0;i<v.size();++i) {
+      init << v[i];
+      if (i<v.size()-1) init << ", ";
+    }
+    // ISO C forbids empty initializer braces
+    if (v.empty()) init << "0";
+    init << "}";
+    g.init_local(n, init.str());
+  }
+
+
   void DaqpInterface::set_daqp_prob(CodeGenerator& g) const {
     g << "p.qp = &p_qp;\n";
     g << "daqp_default_settings(&p.settings);\n";
+    if (!discrete_.empty()) {
+      codegen_local(g, "integrality", integrality_);
+    }
+    if (discrete_.empty()) {
+      g << "p.integrality = 0;\n";
+    } else {
+      g << "p.integrality = integrality;\n";
+    }
+
     for (auto&& op : opts_) {
       if (op.first=="primal_tol") {
         g << "p.settings.primal_tol = " << op.second.to_double() << ";\n";
@@ -170,6 +202,7 @@ namespace casadi {
         casadi_error("Unknown option '" + op.first + "'.");
       }
     }
+    p_.integrality  = get_ptr(integrality_);
 
     casadi_daqp_setup(&p_);
   }

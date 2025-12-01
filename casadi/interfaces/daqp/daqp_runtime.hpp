@@ -30,6 +30,8 @@ struct casadi_daqp_prob {
   const casadi_qp_prob<T1>* qp;
 
   DAQPSettings settings;
+  const int *integrality;
+
 };
 // C-REPLACE "casadi_daqp_prob<T1>" "struct casadi_daqp_prob"
 
@@ -132,6 +134,17 @@ int casadi_daqp_solve(casadi_daqp_data<T1>* d, const double** arg, double** res,
   for (i=0;i<p_qp->na;++i) {
     d->daqp.sense[p_qp->nx+i] = d_qp->lba[i]==d_qp->uba[i] ? 5 : 0;
   }
+  casadi_message(p->integrality[i])
+  // If we have integrality information (e.g. qp->integer[j] == 1 for integer vars):
+  for (i=0;i<p_qp->nx;++i) {
+    casadi_message(p->integrality[i])
+    if (p->integrality[i]) {
+      d->daqp.sense[i] |= 16;       // add the Binary flag
+      casadi_message(d->daqp.sense[i]);
+    }
+  }
+  // std::string sense_log = "sense =";
+  // for (i=0; i<p->qp->nz; ++i) sense_log += " " + std::to_string(d->daqp.sense[i]);
 
   d->daqp.n = p_qp->nx;
   d->daqp.m = p_qp->nx + p_qp->na;
