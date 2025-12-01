@@ -73,13 +73,16 @@ namespace casadi {
 
     // Initialize read-only members of class that don't require saving
     // since they can be derived from other read-only members
-    set_daqp_prob();
-
     if (!discrete_.empty()) {
       integrality_.resize(nx_);
       copy_vector(discrete_, integrality_);
+    } else {
+    integrality_.clear();
     }
     // Andrea: tested: discrete correctly copied into integrality
+
+    set_daqp_prob();
+
 
 
     // Allocate memory
