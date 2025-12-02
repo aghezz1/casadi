@@ -296,6 +296,8 @@ namespace casadi {
     Dict stats = Conic::get_stats(mem);
     auto m = static_cast<DaqpMemory*>(mem);
     stats["return_status"] = m->d.return_status;
+    stats["bnb_nodecount"] = m->d.nodecount;
+    stats["bnb_itercount"] = m->d.bnb_itercount;
     return stats;
   }
 
