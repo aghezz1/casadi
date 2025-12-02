@@ -31,7 +31,6 @@ struct casadi_daqp_prob {
 
   DAQPSettings settings;
   const int *integrality;
-
 };
 // C-REPLACE "casadi_daqp_prob<T1>" "struct casadi_daqp_prob"
 
@@ -137,36 +136,22 @@ int casadi_daqp_solve(casadi_daqp_data<T1>* d, const double** arg, double** res,
   }
 
   if (p->integrality) {
-  for (casadi_int j = 0; j < p_qp->nx; ++j) {
-    if (!p->integrality[j]) continue;
+    for (casadi_int j = 0; j < p_qp->nx; ++j) {
+      if (!p->integrality[j]) continue;
 
-    double lb = d_qp->lbx[j];
-    double ub = d_qp->ubx[j];
+      double lb = d_qp->lbx[j];
+      double ub = d_qp->ubx[j];
 
-    if (std::abs(lb - 0.0) > 1e-9 || std::abs(ub - 1.0) > 1e-9) {
-      std::stringstream ss;
-      ss << "DAQP only supports binary variables with bounds [0,1], "
-         << "but variable " << j << " has bounds [" << lb << ", " << ub << "].";
-      casadi_error(ss.str());
+      if (std::abs(lb - 0.0) > 1e-9 || std::abs(ub - 1.0) > 1e-9) {
+        std::stringstream ss;
+        ss << "DAQP only supports binary variables with bounds [0,1], "
+          << "but variable " << j << " has bounds [" << lb << ", " << ub << "].";
+        casadi_error(ss.str());
+      }
+
+      d->daqp.sense[j] |= 16;  // mark as binary
     }
-
-    d->daqp.sense[j] |= 16;  // mark as binary
   }
-  }
-
-  if (p->integrality) {
-    std::ostringstream oss;
-    oss << "integrality:";
-    for (casadi_int j = 0; j < p_qp->nx; ++j) oss << ' ' << p->integrality[j];
-    casadi_message(oss.str().c_str());
-  }
-  {
-    std::ostringstream oss;
-    oss << "sense:";
-    for (casadi_int j = 0; j < p->qp->nz; ++j) oss << ' ' << d->daqp.sense[j];
-    casadi_message(oss.str().c_str());
-  }
-
 
   d->daqp.n = p_qp->nx;
   d->daqp.m = p_qp->nx + p_qp->na;
@@ -184,20 +169,19 @@ int casadi_daqp_solve(casadi_daqp_data<T1>* d, const double** arg, double** res,
   flag = setup_daqp(&d->daqp,&d->work,&(d->res.setup_time));
   if (flag<0) return 1;
 
-  if (d->work.bnb == nullptr) {
-  casadi_message("Warning: DAQP BnB workspace is null – continuous solver will be used.");
-  } else {
-  casadi_message("DAQP BnB workspace detected – branch-and-bound will run.");
+  if (d->work.bnb != nullptr) {
+    casadi_message("DAQP BnB workspace detected – branch-and-bound will run.");
   }
 
   daqp_solve(&d->res,&d->work);
   casadi_copy(d->res.lam, p_qp->nx, d_qp->lam_x);
   casadi_copy(d->res.lam+p_qp->nx, p_qp->na, d_qp->lam_a);
   if (d->work.bnb) {
-  d->nodecount     = d->work.bnb->nodecount;
-  d->bnb_itercount = d->work.bnb->itercount;
+    d->nodecount = d->work.bnb->nodecount;
+    d->bnb_itercount = d->work.bnb->itercount;
   } else {
-    d->nodecount = d->bnb_itercount = 0;
+    d->nodecount = 0;
+    d->bnb_itercount = 0;
   }
   if (d_qp->f) *d_qp->f = d->res.fval;
   d->work.settings = 0;
@@ -208,7 +192,7 @@ int casadi_daqp_solve(casadi_daqp_data<T1>* d, const double** arg, double** res,
   d_qp->success = d->res.exitflag==EXIT_OPTIMAL;
 
 /**
-  #define EXIT_SOFT_OPTIMAL 2 
+#define EXIT_SOFT_OPTIMAL 2
 #define EXIT_OPTIMAL 1
 #define EXIT_INFEASIBLE -1
 #define EXIT_CYCLE -2

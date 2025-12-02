@@ -79,11 +79,8 @@ namespace casadi {
     } else {
     integrality_.clear();
     }
-    // Andrea: tested: discrete correctly copied into integrality
 
     set_daqp_prob();
-
-
 
     // Allocate memory
     casadi_int sz_arg, sz_res, sz_w, sz_iw;
